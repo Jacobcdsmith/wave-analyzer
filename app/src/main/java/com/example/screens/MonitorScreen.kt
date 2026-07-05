@@ -59,14 +59,32 @@ import androidx.compose.ui.unit.sp
 import com.example.AudioAnalyzerViewModel
 import com.example.VisualMode
 import com.example.ui.theme.getThemeColor
+import com.example.ui.visualizations.AudioOrbCanvas
+import com.example.ui.visualizations.DNAHelixCanvas
+import com.example.ui.visualizations.ElectricArcCanvas
+import com.example.ui.visualizations.FireworksCanvas
+import com.example.ui.visualizations.FountainCanvas
+import com.example.ui.visualizations.GuitarStringsCanvas
+import com.example.ui.visualizations.HexagonGridCanvas
 import com.example.ui.visualizations.IQConstellationCanvas
+import com.example.ui.visualizations.LiquidBlobCanvas
+import com.example.ui.visualizations.LissajousCanvas
+import com.example.ui.visualizations.MandalaCanvas
+import com.example.ui.visualizations.MatrixRainCanvas
+import com.example.ui.visualizations.NeonRingsCanvas
+import com.example.ui.visualizations.ParticleSpectrumCanvas
+import com.example.ui.visualizations.PulseHeartCanvas
 import com.example.ui.visualizations.RadarSpectrumCanvas
 import com.example.ui.visualizations.SDRWaterfallCanvas
+import com.example.ui.visualizations.SoundRingsCanvas
 import com.example.ui.visualizations.SpectrumCanvas
 import com.example.ui.visualizations.PhaseSpaceCanvas
+import com.example.ui.visualizations.StarfieldWarpCanvas
+import com.example.ui.visualizations.VinylGrooveCanvas
 import com.example.ui.visualizations.Waterfall3DCanvas
 import com.example.ui.visualizations.WaveformCanvas
 import kotlin.math.abs
+import kotlin.random.Random
 
 @Composable
 fun MonitorScreen(
@@ -241,6 +259,82 @@ fun MonitorScreen(
                     val waveform by viewModel.waveform.collectAsState()
                     PhaseSpaceCanvas(waveform, colorTheme)
                 }
+                VisualMode.LISSAJOUS -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    LissajousCanvas(waveform, colorTheme)
+                }
+                VisualMode.PARTICLE_SPECTRUM -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    ParticleSpectrumCanvas(spectrum, colorTheme, zoomStartBin, zoomBinCount)
+                }
+                VisualMode.NEON_RINGS -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    NeonRingsCanvas(spectrum, colorTheme)
+                }
+                VisualMode.MATRIX_RAIN -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    MatrixRainCanvas(spectrum, colorTheme, zoomStartBin, zoomBinCount)
+                }
+                VisualMode.STARFIELD_WARP -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    StarfieldWarpCanvas(waveform, colorTheme)
+                }
+                VisualMode.VINYL_GROOVE -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    VinylGrooveCanvas(waveform, colorTheme)
+                }
+                VisualMode.LIQUID_BLOB -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    LiquidBlobCanvas(waveform, colorTheme)
+                }
+                VisualMode.SOUND_RINGS -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    SoundRingsCanvas(waveform, colorTheme)
+                }
+                VisualMode.FIREWORKS -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    FireworksCanvas(spectrum, colorTheme, zoomStartBin, zoomBinCount)
+                }
+                VisualMode.HEXAGON_GRID -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    HexagonGridCanvas(spectrum, colorTheme, zoomStartBin, zoomBinCount)
+                }
+                VisualMode.MANDALA -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    MandalaCanvas(spectrum, colorTheme)
+                }
+                VisualMode.PULSE_HEART -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    PulseHeartCanvas(waveform, colorTheme)
+                }
+                VisualMode.DNA_HELIX -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    DNAHelixCanvas(waveform, colorTheme)
+                }
+                VisualMode.ELECTRIC_ARC -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    ElectricArcCanvas(spectrum, colorTheme, zoomStartBin, zoomBinCount)
+                }
+                VisualMode.FOUNTAIN -> {
+                    val waterfall by viewModel.waterfall.collectAsState()
+                    val spectrum = waterfall.lastOrNull() ?: FloatArray(0)
+                    FountainCanvas(spectrum, colorTheme, zoomStartBin, zoomBinCount)
+                }
+                VisualMode.GUITAR_STRINGS -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    GuitarStringsCanvas(waveform, colorTheme)
+                }
+                VisualMode.AUDIO_ORB -> {
+                    val waveform by viewModel.waveform.collectAsState()
+                    AudioOrbCanvas(waveform, colorTheme)
+                }
             }
 
             Column(modifier = Modifier.align(Alignment.TopStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -400,7 +494,7 @@ fun MonitorScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Canvas(modifier = Modifier.size(20.dp)) {
                                 when (mode) {
-                                    VisualMode.WAVEFORM -> {
+                                    VisualMode.WAVEFORM, VisualMode.GUITAR_STRINGS -> {
                                         val p = androidx.compose.ui.graphics.Path()
                                         p.moveTo(0f, size.height / 2)
                                         for (i in 0..20) {
@@ -410,7 +504,7 @@ fun MonitorScreen(
                                         }
                                         drawPath(p, color = contentColor, style = Stroke(2f))
                                     }
-                                    VisualMode.SPECTRUM, VisualMode.RADAR_SPECTRUM -> {
+                                    VisualMode.SPECTRUM, VisualMode.RADAR_SPECTRUM, VisualMode.PARTICLE_SPECTRUM, VisualMode.FOUNTAIN -> {
                                         val bars = listOf(0.3f, 0.7f, 1f, 0.5f, 0.8f)
                                         val bw = size.width / (bars.size * 2f)
                                         bars.forEachIndexed { i, h ->
@@ -422,9 +516,57 @@ fun MonitorScreen(
                                             drawLine(contentColor, Offset(0f, r * size.height / 4), Offset(size.width, r * size.height / 4), strokeWidth = 1.5f)
                                         }
                                     }
-                                    VisualMode.IQ_PLOT, VisualMode.PHASE_SPACE -> {
+                                    VisualMode.IQ_PLOT, VisualMode.PHASE_SPACE, VisualMode.LISSAJOUS -> {
                                         drawCircle(color = contentColor, radius = size.width * 0.35f, style = Stroke(1.5f))
                                         drawCircle(color = contentColor, radius = 3f)
+                                    }
+                                    VisualMode.NEON_RINGS, VisualMode.SOUND_RINGS, VisualMode.MANDALA, VisualMode.AUDIO_ORB -> {
+                                        drawCircle(contentColor, radius = size.width * 0.35f, style = Stroke(1.5f))
+                                        drawCircle(contentColor, radius = size.width * 0.2f, style = Stroke(1.5f))
+                                    }
+                                    VisualMode.MATRIX_RAIN, VisualMode.HEXAGON_GRID -> {
+                                        for (r in 0..2) {
+                                            for (c in 0..2) {
+                                                drawRect(contentColor, topLeft = Offset(c * size.width / 3f, r * size.height / 3f), size = androidx.compose.ui.geometry.Size(size.width / 4f, size.height / 4f))
+                                            }
+                                        }
+                                    }
+                                    VisualMode.STARFIELD_WARP -> {
+                                        repeat(8) {
+                                            drawCircle(contentColor, radius = 1.5f, center = Offset(Random.nextFloat() * size.width, Random.nextFloat() * size.height))
+                                        }
+                                    }
+                                    VisualMode.VINYL_GROOVE -> {
+                                        drawCircle(contentColor, radius = size.width * 0.4f, style = Stroke(1.5f))
+                                        drawCircle(contentColor, radius = size.width * 0.15f)
+                                    }
+                                    VisualMode.LIQUID_BLOB -> {
+                                        drawCircle(contentColor, radius = size.width * 0.35f)
+                                    }
+                                    VisualMode.FIREWORKS -> {
+                                        repeat(5) {
+                                            drawCircle(contentColor, radius = 2f, center = Offset(Random.nextFloat() * size.width, Random.nextFloat() * size.height * 0.5f))
+                                        }
+                                    }
+                                    VisualMode.PULSE_HEART -> {
+                                        val p = androidx.compose.ui.graphics.Path()
+                                        p.moveTo(size.width / 2, size.height * 0.3f)
+                                        p.cubicTo(size.width * 0.1f, 0f, 0f, size.height * 0.6f, size.width / 2, size.height * 0.9f)
+                                        p.cubicTo(size.width, size.height * 0.6f, size.width * 0.9f, 0f, size.width / 2, size.height * 0.3f)
+                                        p.close()
+                                        drawPath(p, contentColor, style = Stroke(2f))
+                                    }
+                                    VisualMode.DNA_HELIX -> {
+                                        drawLine(contentColor, Offset(0f, size.height * 0.2f), Offset(size.width, size.height * 0.8f), strokeWidth = 2f)
+                                        drawLine(contentColor, Offset(size.width, size.height * 0.2f), Offset(0f, size.height * 0.8f), strokeWidth = 2f)
+                                    }
+                                    VisualMode.ELECTRIC_ARC -> {
+                                        val p = androidx.compose.ui.graphics.Path()
+                                        p.moveTo(0f, size.height * 0.7f)
+                                        p.lineTo(size.width * 0.3f, size.height * 0.3f)
+                                        p.lineTo(size.width * 0.6f, size.height * 0.6f)
+                                        p.lineTo(size.width, size.height * 0.2f)
+                                        drawPath(p, contentColor, style = Stroke(2f))
                                     }
                                 }
                             }

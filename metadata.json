@@ -1,0 +1,6 @@
+{
+  "name": "Wave Analyzer",
+  "description": "Real-time waveform analyzer with native 3D visualization, replacing WebGL with Kotlin Canvas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

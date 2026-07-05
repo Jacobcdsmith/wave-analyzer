@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -49,13 +51,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.AudioAnalyzerViewModel
+import com.example.dsp.ToneWaveform
 import com.example.ui.theme.getThemeColor
 
 @Composable
-fun EngineScreen(viewModel: AudioAnalyzerViewModel) {
+fun EngineScreen(
+    viewModel: AudioAnalyzerViewModel,
+    hasRecordPermission: Boolean = true,
+    onRequestPermission: () -> Unit = {}
+) {
     val context = LocalContext.current
     var sourceExpanded by remember { mutableStateOf(false) }
     var themeExpanded by remember { mutableStateOf(false) }
+    var waveformExpanded by remember { mutableStateOf(false) }
 
     val audioSources = listOf(
         "Microphone" to MediaRecorder.AudioSource.MIC,
@@ -63,13 +71,27 @@ fun EngineScreen(viewModel: AudioAnalyzerViewModel) {
         "Unprocessed" to MediaRecorder.AudioSource.UNPROCESSED,
         "Camcorder" to MediaRecorder.AudioSource.CAMCORDER
     )
-    var selectedSource by remember { mutableStateOf(audioSources[0]) }
 
     val themes = listOf("Default", "Ocean", "Fire", "Cyberpunk")
     val colorTheme by viewModel.colorTheme.collectAsState()
     val gain by viewModel.gain.collectAsState()
     val sensitivity by viewModel.sensitivity.collectAsState()
+    val audioInputMode by viewModel.audioInputMode.collectAsState()
+    val toneWaveform by viewModel.toneWaveform.collectAsState()
+    val toneFrequency by viewModel.toneFrequency.collectAsState()
+    val toneAmplitude by viewModel.toneAmplitude.collectAsState()
+    val isRecording by viewModel.isRecording.collectAsState()
     val themeColor = getThemeColor(colorTheme)
+
+    fun restartInputIfRecording(mode: AudioAnalyzerViewModel.AudioInputMode) {
+        viewModel.updateAudioInputMode(mode)
+        if (isRecording) {
+            when (mode) {
+                AudioAnalyzerViewModel.AudioInputMode.MICROPHONE -> viewModel.startRecording(context, MediaRecorder.AudioSource.MIC)
+                AudioAnalyzerViewModel.AudioInputMode.TONE_GENERATOR -> viewModel.startToneGenerator()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -122,21 +144,106 @@ fun EngineScreen(viewModel: AudioAnalyzerViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(selectedSource.first, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        when (audioInputMode) {
+                            AudioAnalyzerViewModel.AudioInputMode.MICROPHONE -> "Microphone"
+                            AudioAnalyzerViewModel.AudioInputMode.TONE_GENERATOR -> "Tone Generator"
+                        },
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
                 DropdownMenu(expanded = sourceExpanded, onDismissRequest = { sourceExpanded = false }) {
                     audioSources.forEach { source ->
                         DropdownMenuItem(
                             text = { Text(source.first) },
                             onClick = {
-                                selectedSource = source
                                 sourceExpanded = false
                                 viewModel.stopRecording()
                                 viewModel.startRecording(context, source.second)
                             }
                         )
                     }
+                    DropdownMenuItem(
+                        text = { Text("Tone Generator") },
+                        onClick = {
+                            sourceExpanded = false
+                            restartInputIfRecording(AudioAnalyzerViewModel.AudioInputMode.TONE_GENERATOR)
+                        }
+                    )
                 }
+            }
+
+            if (audioInputMode == AudioAnalyzerViewModel.AudioInputMode.MICROPHONE && !hasRecordPermission) {
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = onRequestPermission,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF665200)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Grant Microphone Permission", color = Color.Yellow)
+                }
+            }
+
+            if (audioInputMode == AudioAnalyzerViewModel.AudioInputMode.TONE_GENERATOR) {
+                Spacer(Modifier.height(16.dp))
+                SectionHeader("Tone Shape", themeColor.copy(alpha = 0.7f))
+                Spacer(Modifier.height(8.dp))
+                Box {
+                    OutlinedButton(
+                        onClick = { waveformExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(toneWaveform.name, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    DropdownMenu(expanded = waveformExpanded, onDismissRequest = { waveformExpanded = false }) {
+                        ToneWaveform.entries.forEach { waveform ->
+                            DropdownMenuItem(
+                                text = { Text(waveform.name) },
+                                onClick = {
+                                    viewModel.updateToneWaveform(waveform)
+                                    waveformExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Frequency: ${toneFrequency.toInt()} Hz",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = toneFrequency,
+                    onValueChange = { viewModel.updateToneFrequency(it) },
+                    valueRange = 20f..8000f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = themeColor,
+                        activeTrackColor = themeColor
+                    )
+                )
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Amplitude: ${String.format("%.0f", toneAmplitude * 100)}%",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = toneAmplitude,
+                    onValueChange = { viewModel.updateToneAmplitude(it) },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = themeColor,
+                        activeTrackColor = themeColor
+                    )
+                )
             }
         }
 

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
@@ -84,61 +85,65 @@ fun WaveAnalyzerApp() {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (hasPermission) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outline)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    navItems.forEachIndexed { index, (title, icon) ->
-                        val isSelected = index == currentTab
-                        val color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        Column(
-                            modifier = Modifier
-                                .clickable { currentTab = index }
-                                .padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(imageVector = icon, contentDescription = title, tint = color)
-                            Text(title, style = MaterialTheme.typography.labelSmall, color = color)
-                        }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outline)
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                navItems.forEachIndexed { index, (title, icon) ->
+                    val isSelected = index == currentTab
+                    val color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    Column(
+                        modifier = Modifier
+                            .clickable { currentTab = index }
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(imageVector = icon, contentDescription = title, tint = color)
+                        Text(title, style = MaterialTheme.typography.labelSmall, color = color)
                     }
                 }
             }
         }
     ) { padding ->
-        if (hasPermission) {
-            Box(Modifier.padding(padding)) {
-                when (currentTab) {
-                    0 -> MonitorScreen(viewModel, onNavigateToEngine = { currentTab = 2 })
-                    1 -> CaptureScreen(viewModel)
-                    2 -> EngineScreen(viewModel)
-                    3 -> RemoteScreen()
-                }
-            }
-        } else {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Yellow, modifier = Modifier.size(48.dp))
-                    Spacer(Modifier.height(16.dp))
+        Column(Modifier.padding(padding)) {
+            if (!hasPermission) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF332600))
+                        .border(1.dp, Color(0xFF665200))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        "Microphone permission is required for real-time waveform capture & visualization.",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
+                        "Microphone permission is required for live audio capture. Tone generator works without it.",
+                        color = Color.Yellow,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.width(12.dp))
                     Button(
                         onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.height(32.dp)
                     ) {
-                        Text("Grant Permission")
+                        Text("Grant", style = MaterialTheme.typography.labelSmall)
                     }
+                }
+            }
+            Box(Modifier.weight(1f)) {
+                when (currentTab) {
+                    0 -> MonitorScreen(viewModel, onNavigateToEngine = { currentTab = 2 }, hasRecordPermission = hasPermission)
+                    1 -> CaptureScreen(viewModel)
+                    2 -> EngineScreen(viewModel, hasRecordPermission = hasPermission, onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) })
+                    3 -> RemoteScreen()
                 }
             }
         }

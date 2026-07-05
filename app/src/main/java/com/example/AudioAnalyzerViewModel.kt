@@ -11,7 +11,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ai.AIService
 import com.example.dsp.SpectrumProcessor
+import com.example.dsp.ToneGenerator
+import com.example.dsp.ToneWaveform
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,12 +72,33 @@ class AudioAnalyzerViewModel : ViewModel() {
     private val _zoomStartBin = MutableStateFlow(0)
     val zoomStartBin: StateFlow<Int> = _zoomStartBin.asStateFlow()
 
+    private val _audioInputMode = MutableStateFlow(AudioInputMode.MICROPHONE)
+    val audioInputMode: StateFlow<AudioInputMode> = _audioInputMode.asStateFlow()
+
+    private val _toneWaveform = MutableStateFlow(ToneWaveform.SINE)
+    val toneWaveform: StateFlow<ToneWaveform> = _toneWaveform.asStateFlow()
+
+    private val _toneFrequency = MutableStateFlow(1000f)
+    val toneFrequency: StateFlow<Float> = _toneFrequency.asStateFlow()
+
+    private val _toneAmplitude = MutableStateFlow(0.5f)
+    val toneAmplitude: StateFlow<Float> = _toneAmplitude.asStateFlow()
+
+    enum class AudioInputMode { MICROPHONE, TONE_GENERATOR }
+
     private val _zoomBinCount = MutableStateFlow(bufferSize / 2)
     val zoomBinCount: StateFlow<Int> = _zoomBinCount.asStateFlow()
 
     fun updateGain(g: Float) { _gain.value = g }
     fun updateSensitivity(s: Float) { _sensitivity.value = s }
     fun updateColorTheme(t: Int) { _colorTheme.value = t }
+    fun updateAudioInputMode(mode: AudioInputMode) {
+        if (_isRecording.value) stopRecording()
+        _audioInputMode.value = mode
+    }
+    fun updateToneWaveform(waveform: ToneWaveform) { _toneWaveform.value = waveform }
+    fun updateToneFrequency(freq: Float) { _toneFrequency.value = freq.coerceIn(20f, 20000f) }
+    fun updateToneAmplitude(amp: Float) { _toneAmplitude.value = amp.coerceIn(0f, 1f) }
 
     fun freezeSpectrum() {
         _frozenSpectrum.value = _peakSpectrum.value.clone()
@@ -131,6 +155,18 @@ class AudioAnalyzerViewModel : ViewModel() {
 
     private var audioRecord: AudioRecord? = null
     private val spectrumProcessor = SpectrumProcessor(sampleRate, bufferSize, waterfallHistorySize)
+    private val toneGenerator = ToneGenerator(sampleRate)
+
+    fun toggleRecording(context: Context?) {
+        if (_isRecording.value) {
+            stopRecording()
+        } else {
+            when (_audioInputMode.value) {
+                AudioInputMode.MICROPHONE -> context?.let { startRecording(it) }
+                AudioInputMode.TONE_GENERATOR -> startToneGenerator()
+            }
+        }
+    }
 
     fun startRecording(context: Context, audioSource: Int = MediaRecorder.AudioSource.MIC) {
         if (_isRecording.value) return
@@ -140,6 +176,7 @@ class AudioAnalyzerViewModel : ViewModel() {
             return
         }
 
+        _audioInputMode.value = AudioInputMode.MICROPHONE
         val minBufSize = AudioRecord.getMinBufferSize(
             sampleRate,
             AudioFormat.CHANNEL_IN_MONO,
@@ -162,42 +199,68 @@ class AudioAnalyzerViewModel : ViewModel() {
 
             viewModelScope.launch(Dispatchers.IO) {
                 val audioBuffer = ShortArray(bufferSize)
-                var frameCount = 0L
-                var processedFrames = 0L
-                val startTime = System.nanoTime()
-
-                while (isActive && _isRecording.value) {
+                runAnalyzerLoop { _ ->
                     val readResult = audioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
-                    if (readResult > 0) {
-                        val frame = spectrumProcessor.process(
-                            samples = audioBuffer,
-                            gain = _gain.value,
-                            sensitivity = _sensitivity.value
-                        )
-
-                        _waveform.value = frame.waveform
-                        _rmsLevel.value = frame.rms
-                        _peakDb.value = frame.peakDb
-                        _dominantFreq.value = frame.dominantFreq
-                        _waterfall.value = frame.waterfall
-                        _peakSpectrum.value = frame.peakSpectrum
-
-                        processedFrames++
-                    } else {
-                        delay(10)
-                    }
-                    frameCount++
-                    val elapsed = (System.nanoTime() - startTime) / 1e9
-                    if (elapsed > 0.5) {
-                        val expectedFrames = (elapsed * sampleRate / bufferSize).toLong()
-                        val pct = if (expectedFrames > 0) ((processedFrames.toDouble() / expectedFrames) * 100).toInt().coerceIn(0, 100) else 0
-                        _throughputPercent.value = pct
-                    }
+                    if (readResult > 0) audioBuffer else null
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             _isRecording.value = false
+        }
+    }
+
+    fun startToneGenerator() {
+        if (_isRecording.value) return
+
+        _audioInputMode.value = AudioInputMode.TONE_GENERATOR
+        toneGenerator.reset()
+        _isRecording.value = true
+
+        viewModelScope.launch(Dispatchers.IO) {
+            runAnalyzerLoop { _ ->
+                toneGenerator.generate(
+                    bufferSize = bufferSize,
+                    waveform = _toneWaveform.value,
+                    frequencyHz = _toneFrequency.value,
+                    amplitude = _toneAmplitude.value
+                )
+            }
+        }
+    }
+
+    private suspend fun runAnalyzerLoop(produceSamples: (bufferSize: Int) -> ShortArray?) {
+        var frameCount = 0L
+        var processedFrames = 0L
+        val startTime = System.nanoTime()
+
+        while (currentCoroutineContext().isActive && _isRecording.value) {
+            val samples = produceSamples(bufferSize)
+            if (samples != null) {
+                val frame = spectrumProcessor.process(
+                    samples = samples,
+                    gain = _gain.value,
+                    sensitivity = _sensitivity.value
+                )
+
+                _waveform.value = frame.waveform
+                _rmsLevel.value = frame.rms
+                _peakDb.value = frame.peakDb
+                _dominantFreq.value = frame.dominantFreq
+                _waterfall.value = frame.waterfall
+                _peakSpectrum.value = frame.peakSpectrum
+
+                processedFrames++
+            } else {
+                delay(10)
+            }
+            frameCount++
+            val elapsed = (System.nanoTime() - startTime) / 1e9
+            if (elapsed > 0.5) {
+                val expectedFrames = (elapsed * sampleRate / bufferSize).toLong()
+                val pct = if (expectedFrames > 0) ((processedFrames.toDouble() / expectedFrames) * 100).toInt().coerceIn(0, 100) else 0
+                _throughputPercent.value = pct
+            }
         }
     }
 

@@ -34,6 +34,8 @@
   - TCP connection to rtl_tcp for real-time RF monitoring
 - **Engine Tuning**
   - Adjustable gain, sensitivity, color themes, and audio source
+- **On-Device Tone Generator**
+  - Self-test with sine, square, sawtooth, or noise — no microphone permission required
 - **Dark Scientific UI**
   - Cyan, Ocean, Fire, and Cyberpunk themes
 
@@ -130,6 +132,7 @@ The release signing config expects the key alias to be `upload`.
 - [x] Frequency / dB grid overlays
 - [x] Extract testable `SpectrumProcessor`
 - [x] CI pipeline
+- [x] On-device tone generator
 - [ ] Export captures as PNG / CSV
 - [ ] Measurement cursors
 - [ ] Max-hold & average trace overlays

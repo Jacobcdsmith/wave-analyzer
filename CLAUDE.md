@@ -41,11 +41,12 @@ Source is split across focused files under `app/src/main/java/com/example/`:
 | File | Purpose |
 |------|---------|
 | `MainActivity.kt` | Thin activity — `enableEdgeToEdge()` + `setContent { WaveAnalyzerApp() }` |
-| `WaveAnalyzerApp.kt` | Root composable: permission gate + hero screen + 4-tab bottom nav |
+| `WaveAnalyzerApp.kt` | Root composable: permission banner + hero screen + 4-tab bottom nav |
 | `AudioAnalyzerViewModel.kt` | Audio capture, DSP pipeline orchestration, state, AI analysis |
 | `VisualMode.kt` | 7 visualization mode enum |
 | `dsp/FFT.kt` | In-place Cooley-Tukey FFT |
 | `dsp/SpectrumProcessor.kt` | Windowing, FFT, dB conversion, peak-hold, waterfall buffering |
+| `dsp/ToneGenerator.kt` | Sine/square/saw/noise generator for self-test |
 | `ai/AIService.kt` | Gemini API — suspend function, OkHttp direct POST |
 | `screens/*.kt` | Hero, Monitor, Capture, Engine, Remote screens |
 | `ui/visualizations/Visualizations.kt` | All 7 Canvas composables |

@@ -72,6 +72,7 @@ import kotlin.math.abs
 fun MonitorScreen(
     viewModel: AudioAnalyzerViewModel,
     onNavigateToEngine: () -> Unit = {},
+    hasRecordPermission: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -84,6 +85,7 @@ fun MonitorScreen(
     val rms by viewModel.rmsLevel.collectAsState()
     val zoomStartBin by viewModel.zoomStartBin.collectAsState()
     val zoomBinCount by viewModel.zoomBinCount.collectAsState()
+    val audioInputMode by viewModel.audioInputMode.collectAsState()
 
     val supportsZoomPan = currentMode in setOf(
         VisualMode.SPECTRUM,
@@ -301,6 +303,21 @@ fun MonitorScreen(
                         )
                     }
                 }
+                if (audioInputMode == AudioAnalyzerViewModel.AudioInputMode.MICROPHONE && !hasRecordPermission) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF332600), shape = RoundedCornerShape(6.dp))
+                            .border(1.dp, Color(0xFF665200), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            "MIC PERMISSION NEEDED",
+                            color = Color.Yellow,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
             Column(modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
@@ -433,7 +450,7 @@ fun MonitorScreen(
                             if (isRecording) Color(0xFFFF1744) else MaterialTheme.colorScheme.secondary,
                             shape = CircleShape
                         )
-                        .clickable { if (isRecording) viewModel.stopRecording() else viewModel.startRecording(context) },
+                        .clickable { viewModel.toggleRecording(context) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

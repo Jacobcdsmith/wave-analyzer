@@ -1,0 +1,67 @@
+# Deploy a signed release APK to GitHub Releases.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   - SIGNING_KEY_BASE64 : base64-encoded Android signing keystore (.jks)
+#   - STORE_PASSWORD     : keystore password
+#   - KEY_PASSWORD       : signing key password
+#
+# The key alias is expected to be "upload" (configured in app/build.gradle.kts).
+#
+# Trigger by pushing a tag like v1.0.0, or run manually from the Actions tab.
+
+name: Deploy Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 -d > my-upload-key.jks
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Create .env
+        run: echo "GEMINI_API_KEY=DUMMY_KEY_FOR_CI" > .env
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build release APK
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ github.ref_name }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK with version
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/wave-analyzer-${{ github.ref_name }}.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/wave-analyzer-*.apk
+          name: "Wave Analyzer ${{ github.ref_name }}"
+          generate_release_notes: true

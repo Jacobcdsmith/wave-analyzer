@@ -5,6 +5,7 @@
 **Real-time audio & RF spectrum analyzer for Android, built with Jetpack Compose and Kotlin Canvas.**
 
 [![CI](https://github.com/Jacobcdsmith/wave-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/Jacobcdsmith/wave-analyzer/actions/workflows/ci.yml)
+[![Deploy](https://github.com/Jacobcdsmith/wave-analyzer/actions/workflows/deploy.yml/badge.svg)](https://github.com/Jacobcdsmith/wave-analyzer/actions/workflows/deploy.yml)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0+-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android](https://img.shields.io/badge/Android-API%2026+-3DDC84?logo=android&logoColor=white)](https://developer.android.com/)
 [![Gemini](https://img.shields.io/badge/Powered%20by-Gemini-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
@@ -99,6 +100,29 @@ AudioRecord → SpectrumProcessor → FFT → StateFlow → Compose Canvas
 ```
 
 ---
+
+## 🚀 Deploy
+
+Push a version tag to trigger the release workflow:
+
+```bash
+git tag -a v1.0.0 -m "First release"
+git push origin v1.0.0
+```
+
+The GitHub Action will build a signed release APK and attach it to a new GitHub Release.
+
+### Required secrets
+
+Go to **Settings > Secrets and variables > Actions** and add:
+
+| Secret | How to generate |
+|--------|-----------------|
+| `SIGNING_KEY_BASE64` | `base64 -i my-upload-key.jks` |
+| `STORE_PASSWORD` | Your keystore password |
+| `KEY_PASSWORD` | Your key password |
+
+The release signing config expects the key alias to be `upload`.
 
 ## 📡 Roadmap
 
